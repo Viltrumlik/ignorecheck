@@ -99,19 +99,19 @@ def which_rule(root, paths):
         return {}
     # --no-index shart: usiz check-ignore kuzatuvdagi fayl haqida hech
     # narsa aytmaydi, bizda esa aynan o'shalar tekshiriladi.
-    out = run(root, "check-ignore", "-v", "--no-index", "--stdin",
-              input="\n".join(paths[:MAX_CHECK]) + "\n")
+    #
+    # -z ham shart. Usiz chiqish "<fayl>:<qator>:<qoida>\t<yo'l>" bo'ladi va
+    # uni ikki nuqta bo'yicha ajratish Windows'da buziladi: yo'lda "C:" bor.
+    # -z bilan maydonlar NUL bilan ajratiladi va hech qanday taxmin kerak
+    # emas.
+    out = run(root, "check-ignore", "-v", "-z", "--no-index", "--stdin",
+              input="\0".join(paths[:MAX_CHECK]) + "\0")
+    fields = out.stdout.split("\0")
     found = {}
-    # `git check-ignore -v` qatori: <fayl>:<qator>:<qoida>\t<yo'l>
-    # Qoida ichida ham ikki nuqta bo'lishi mumkin, shuning uchun chapdan
-    # faqat ikki marta bo'linadi.
-    for line in out.stdout.splitlines():
-        source, tab, path = line.partition("\t")
-        if not tab:
-            continue
-        bits = source.split(":", 2)
-        if len(bits) == 3:
-            found[path] = ("%s:%s" % (bits[0], bits[1]), bits[2])
+    for i in range(0, len(fields) - 3, 4):
+        source, number, rule, path = fields[i:i + 4]
+        if path:
+            found[path] = ("%s:%s" % (source, number), rule)
     return found
 
 
